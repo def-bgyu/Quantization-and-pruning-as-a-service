@@ -1,0 +1,38 @@
+# Environment variables - never commit these
+.env
+*.env
+
+# Python virtual environments
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints
+
+# Model outputs
+outputs/
+*.bin
+*.pt
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# SSH keys - just in case
+*.pem
+*.key

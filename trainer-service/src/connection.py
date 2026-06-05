@@ -7,11 +7,7 @@ class readWriteMinioKafka():
     def __init__(self, reset=True) -> None:
         self.reset = reset
         kafka_consumer_config = {
-            'bootstrap.servers': "pkc-4r087.us-east1.gcp.confluent.cloud",
-            'security.protocol': 'SASL_SSL',
-            'sasl.mechanisms': 'PLAIN',
-            'sasl.username': os.getenv("SASL_USERNAME"),
-            'sasl.password': os.getenv("SASL_PASSWD"),
+            'bootstrap.servers': os.getenv("KAFKA_BOOTSTRAP_SERVER") or "localhost:9092",
             'group.id': 'python_train_job_consumer',
             'auto.offset.reset': 'earliest'
         }

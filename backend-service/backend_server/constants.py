@@ -1,5 +1,7 @@
 import os
 import secrets
+from dotenv import load_dotenv
+load_dotenv()
 
 # Flask configs
 FLASK_SECRET = os.getenv('FLASK_SECRET') or secrets.token_hex()
@@ -19,12 +21,12 @@ minioPasswd = os.getenv("MINIO_PASSWD") or "minioadmin"
 # Confluent Kafka configs
 KAFKA_USERNAME = os.getenv("KAFKA_USERNAME")
 KAFKA_SECRET = os.getenv("KAFKA_SECRET")
-KAFKA_BOOTSTRAP_SERVER = #placeholder
+KAFKA_BOOTSTRAP_SERVER = os.getenv("KAFKA_BOOTSTRAP_SERVER") or "localhost:9092"
 KAFKA_SUBMIT_JOB_TOPIC = 'submit_job'
 
 # Mongo configs
 MONGO_ATLAS_SECRET = os.getenv("MONGO_ATLAS_SECRET")
-MONGO_CONNECTION = f'mongodb+srv://QuanTAASuser:{MONGO_ATLAS_SECRET}@quantaas.wqjqmye.mongodb.net/?retryWrites=true&w=majority'
+MONGO_CONNECTION = f'mongodb+srv://Nidhi:{MONGO_ATLAS_SECRET}@cluster0.a6v2ibl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
 
 # Redis configs
 REDISHOST = os.getenv("REDISTOGO_URL") or "localhost"

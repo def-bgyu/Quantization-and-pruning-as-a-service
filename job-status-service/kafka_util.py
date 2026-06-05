@@ -3,13 +3,8 @@ from confluent_kafka import Consumer, OFFSET_BEGINNING
 
 kafka_consumer_config = {
     'bootstrap.servers': constants.KAFKA_BOOTSTRAP_SERVER,
-    'security.protocol': 'SASL_SSL',
-    'sasl.mechanisms': 'PLAIN',
-    'sasl.username': constants.KAFKA_USERNAME,
-    'sasl.password': constants.KAFKA_SECRET,
     'group.id': constants.KAFKA_GROUP_ID,
     'auto.offset.reset': constants.KAFKA_OFFSET_RESET
-
 }
 
 def reset_offset(consumer, partitions):
