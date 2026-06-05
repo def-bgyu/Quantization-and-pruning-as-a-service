@@ -27,39 +27,7 @@ Users upload a pre-trained HuggingFace transformer model and a test dataset (CSV
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        User Browser                          │
-│                    React Frontend (port 3000)                │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ HTTP
-┌──────────────────────────▼──────────────────────────────────┐
-│                  Flask Backend (port 5002)                    │
-│         Auth │ Job Submission │ Results │ Model Download      │
-└────┬─────────────┬──────────────────┬───────────────────────┘
-     │             │                  │
-     ▼             ▼                  ▼
-  MongoDB        Kafka            MinIO
-  (metadata,   (job queue)      (model files,
-   results)                      datasets)
-                  │
-                  ▼
-     ┌────────────────────────┐
-     │    Trainer Service      │
-     │  - Load HF model        │
-     │  - Apply pruning        │
-     │  - Apply quantization   │
-     │  - Evaluate metrics     │
-     │  - Save to MinIO        │
-     └────────────┬───────────┘
-                  │ Kafka
-                  ▼
-     ┌────────────────────────┐
-     │  Job Status Service     │
-     │  - Listen for results   │
-     │  - Update MongoDB       │
-     └────────────────────────┘
-```
+![QuantTaaS Architecture](architecture.png)
 
 ---
 
@@ -228,7 +196,7 @@ Frontend runs at `http://localhost:3000`, backend at `http://localhost:5002`.
 
 ## Deploying on AWS EC2
 
-1. Launch an `m7i.large` EC2 instance (Ubuntu 24.04, 20GB storage)
+1. Launch an (`m7i.large`) EC2 instance 
 2. Install Docker and clone the repo
 3. Start MinIO, Redis, and Kafka as Docker containers
 4. Set up `.env` files with MongoDB credentials
