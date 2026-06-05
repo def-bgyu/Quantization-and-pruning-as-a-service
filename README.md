@@ -1,102 +1,252 @@
-# **QuantTaaS: Quantization and Pruning as a Service**
+# QuantTaaS — Quantization and Pruning as a Service
 
-## **Project Contributors**
+A cloud-based platform that lets users compress pre-trained NLP models using **pruning** and **quantization**, making them faster and smaller for deployment on edge devices and resource-constrained environments.
 
-- Nidhi Sankhe
-- Disha Gundecha
-  
-## **Project Overview**
+> Built as a distributed microservices system using Flask, React, Kafka, MongoDB, MinIO, Redis, PyTorch, and Docker — deployed on AWS EC2.
 
-**QuantTaaS** (Quantization and Pruning as a Service) is a cloud-based platform designed to optimize deep learning models by applying quantization and pruning techniques. The service allows users to upload pre-trained models and apply model compression strategies to reduce their size and improve deployment on resource-constrained environments, such as IoT devices, mobile platforms, and edge devices.
+---
 
-The primary goal of **QuantTaaS** is to automate model optimization with minimal manual effort, providing real-time insights into the impact of various optimization strategies on model performance. Through the service, users can upload pre-trained models, run optimizations (quantization and pruning), and evaluate the resulting models based on accuracy and size.
+## What It Does
 
-## **Key Features**
+Users upload a pre-trained HuggingFace transformer model and a test dataset (CSV). The platform:
 
-- **Pre-trained Model Upload**: Users can upload pre-trained models to the platform for optimization.
-- **Pruning**: The model can be pruned to reduce unnecessary weights, enhancing both efficiency and speed.
-- **Quantization**: The model can be quantized to reduce precision, making it more suitable for deployment on edge devices.
-- **Model Evaluation**: Post-optimization, the platform evaluates the accuracy and model size of the original, pruned, and quantized models on a provided test dataset.
-- **Real-Time Visualization**: Users can visualize the effects of pruning and quantization on the model’s accuracy and size.
-- **Seamless Integration with MinIO and Kafka**: Results, including models, are stored in **MinIO** and the job status is tracked through **Kafka**.
+1. Applies **unstructured pruning** (L1 norm) and **structured pruning** (attention head pruning) to reduce model weights
+2. Applies **dynamic quantization** (INT8) to reduce model precision
+3. Evaluates the **original**, **pruned**, and **quantized** models on accuracy and model size
+4. Displays side-by-side comparison results in the dashboard
 
-## **Technologies Used**
+### Supported Tasks
+| Task | Example Models |
+|------|---------------|
+| Sentiment Classification | DistilRoberta, FinBERT, FinTwitBERT |
+| Question Answering | Custom HuggingFace models |
+| Summarization | T5, BART-based models |
+| Machine Translation | Helsinki-NLP models |
 
-### **Software Components:**
+---
 
-- **Frontend**: React (for a responsive, intuitive user interface)
-- **Backend**: Flask (to handle user requests and API endpoints)
-- **Cloud Storage**: MinIO (for storing models and results)
-- **Messaging Queue**: Kafka (for job status tracking and notifications)
-- **Model Optimization Libraries**: PyTorch (for pruning, quantization, and model evaluation)
-- **Database**: MongoDB (for storing job and model metadata, including optimization details and performance metrics)
-- **Experimentation Tools**: Ray/Dask (for parallel execution of pruning and quantization configurations)
-- **Visualization**: Matplotlib (to visualize model performance changes after optimization)
+## Architecture
 
-### **Hardware Components:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        User Browser                          │
+│                    React Frontend (port 3000)                │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ HTTP
+┌──────────────────────────▼──────────────────────────────────┐
+│                  Flask Backend (port 5002)                    │
+│         Auth │ Job Submission │ Results │ Model Download      │
+└────┬─────────────┬──────────────────┬───────────────────────┘
+     │             │                  │
+     ▼             ▼                  ▼
+  MongoDB        Kafka            MinIO
+  (metadata,   (job queue)      (model files,
+   results)                      datasets)
+                  │
+                  ▼
+     ┌────────────────────────┐
+     │    Trainer Service      │
+     │  - Load HF model        │
+     │  - Apply pruning        │
+     │  - Apply quantization   │
+     │  - Evaluate metrics     │
+     │  - Save to MinIO        │
+     └────────────┬───────────┘
+                  │ Kafka
+                  ▼
+     ┌────────────────────────┐
+     │  Job Status Service     │
+     │  - Listen for results   │
+     │  - Update MongoDB       │
+     └────────────────────────┘
+```
 
-- **Cloud CPU Instances**: For model optimization tasks
-- **Cloud GPU Instances**: For model optimization tasks that require high computational power.
+---
 
-## **Project Architecture**
+## Tech Stack
 
-The **QuantTaaS** architecture is divided into distinct services that work together to deliver the entire model optimization and evaluation pipeline:
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Material UI, Chart.js, Axios |
+| Backend | Python, Flask, Flask-Login, Flask-CORS |
+| Trainer | PyTorch, HuggingFace Transformers, Evaluate |
+| Message Queue | Apache Kafka |
+| Object Storage | MinIO (S3-compatible) |
+| Database | MongoDB Atlas |
+| Cache / Sessions | Redis |
+| Containerization | Docker |
+| Orchestration | Kubernetes (GKE manifests included) |
+| Cloud | AWS EC2 |
 
-1. **Frontend**: 
-   - The frontend, built using **React**, provides an intuitive interface for users to upload pre-trained models, configure optimization settings (e.g., pruning percentage, quantization level), and visualize the results.
-   
-2. **Backend**:
-   - The **Flask backend** manages user requests and coordinates tasks with other services.
-   - Upon receiving requests, the backend triggers the model optimization process, which includes:
-     - Loading the pre-trained model.
-     - Applying pruning (both unstructured and structured) and quantization to the model.
-     - Evaluating the model before and after optimization based on the user-provided test dataset.
-   
-3. **Trainer Service**:
-   - This is the core service that handles:
-     - **Model pruning and quantization**: Applies model compression techniques to reduce model size.
-     - **Model evaluation**: Evaluates the model's performance, including accuracy and size.
-     - **Saving models**: Stores the models in **MinIO** (both original, pruned, and quantized versions) and tracks their performance.
-   
-4. **Job Status Service**:
-   - This service monitors the job status using **Kafka**, keeping track of the progress of each model optimization task. It sends updates to the frontend once the tasks are complete.
-   
-5. **MinIO Storage**:
-   - **MinIO** is used for storing models and their evaluation results. The service saves the original, pruned, and quantized models along with their performance metrics.
+---
 
-6. **Kafka**:
-   - **Kafka** is used for job tracking and status updates. It acts as a message queue that receives and sends job completion updates to the backend and frontend.
+## Project Structure
 
-## **How to Deploy the Project**
+```
+├── backend-service/        # Flask REST API
+│   └── backend_server/
+│       ├── auth.py         # Login / Signup
+│       ├── submit_job.py   # Job submission endpoint
+│       ├── prev_runs.py    # Fetch past jobs
+│       ├── current_run.py  # Fetch running jobs
+│       ├── minio_utils.py  # MinIO file operations
+│       ├── kafka_utils.py  # Kafka producer
+│       └── mongo_utils.py  # MongoDB operations
+│
+├── trainer-service/        # ML optimization worker
+│   └── src/
+│       ├── trainer.py      # Pruning + quantization logic
+│       ├── runner.py       # Kafka consumer loop
+│       ├── models.py       # HuggingFace model loader
+│       ├── dataset.py      # Dataset loader + tokenizer
+│       └── connection.py   # Kafka + MinIO connections
+│
+├── job-status-service/     # Job completion listener
+│   ├── run.py              # Kafka consumer → MongoDB updater
+│   └── kafka_util.py       # Kafka consumer config
+│
+├── ui-service/             # React frontend
+│   └── src/
+│       ├── pages/
+│       │   ├── Dashboard.jsx       # Main dashboard (Running/Completed tabs)
+│       │   ├── RunningStats.jsx    # Live job status
+│       │   ├── CompletedStats.jsx  # Completed jobs table
+│       │   ├── Login.jsx           # Login page
+│       │   └── Signup.jsx          # Signup page
+│       └── components/
+│           ├── AddJobModal.jsx         # Job submission form
+│           └── OptimizationResults.jsx # Results charts
+│
+└── Deployments/
+    └── Kubernetes/         # K8s manifests for GKE deployment
+```
 
-### **Prerequisites**
+---
 
-Before deploying the project, ensure that you have the following setup:
+## How a Job Works
 
-- **MinIO**: For model storage and access.
-- **Kafka**: For job status management.
-- **Python 3.x**: For backend and model optimization tasks.
-- **Docker**: For containerizing the services.
-- **Google Cloud Account (optional)**: For GPU instances (if you want to run model optimization on cloud GPUs).
-  
-### **Deployment Steps**
+1. User logs in and clicks **Add Job** on the dashboard
+2. Fills in: experiment name, task type, model name, uploads a CSV test dataset
+3. Frontend sends a `POST /submit-job` to the Flask backend
+4. Backend:
+   - Uploads the CSV to **MinIO**
+   - Records job metadata in **MongoDB**
+   - Publishes a message to the **Kafka** `submit_job` topic
+5. **Trainer Service** picks up the Kafka message and:
+   - Downloads the CSV from MinIO
+   - Loads the HuggingFace model
+   - Applies L1 unstructured pruning + attention head pruning
+   - Applies dynamic INT8 quantization
+   - Measures model size (MB) for all three versions
+   - Saves models back to MinIO
+   - Publishes results to `completed_job` Kafka topic
+6. **Job Status Service** picks up the completion message and updates MongoDB
+7. Frontend polls the backend and displays results in the **Completed** tab
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/cu-csci-4253-datacenter-fall-2024/finalproject-final-project-team-92.git
-   cd finalproject-final-project-team-92
+---
 
-2. **Set Up the Backend**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate        # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   python app.py
+## Running Locally
 
-3. **Set Up the Frontend**
-   ```bash
-   cd ../frontend
-   npm install
-   npm start
+### Prerequisites
+- Docker
+- Python 3.10+
+- Node.js 18+
+
+### 1. Start Infrastructure (Docker)
+
+```bash
+# MinIO
+docker run -d --name minio -p 9000:9000 -p 9001:9001 \
+  -e MINIO_ROOT_USER=minioadmin \
+  -e MINIO_ROOT_PASSWORD=minioadmin \
+  quay.io/minio/minio server /data --console-address ":9001"
+
+# Redis
+docker run -d --name redis -p 6379:6379 redis
+
+# Kafka
+docker run -d --name kafka -p 9092:9092 \
+  -e KAFKA_NODE_ID=1 \
+  -e KAFKA_PROCESS_ROLES=broker,controller \
+  -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093 \
+  -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 \
+  -e KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER \
+  -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT \
+  -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093 \
+  -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
+  -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true \
+  -e CLUSTER_ID=5L6g3nShT-eMCtK--X86sw \
+  apache/kafka:latest
+```
+
+### 2. Configure Environment Variables
+
+Create a `.env` file in `backend-service/`, `job-status-service/`, and `trainer-service/`:
+
+```env
+MONGO_ATLAS_SECRET=your_mongodb_password
+```
+
+### 3. Start Backend
+
+```bash
+cd backend-service
+python -m venv venv && source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python run.py
+```
+
+### 4. Start Job Status Service
+
+```bash
+cd job-status-service
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python run.py
+```
+
+### 5. Start Trainer Service
+
+```bash
+cd trainer-service
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python run.py
+```
+
+### 6. Start Frontend
+
+```bash
+cd ui-service
+npm install
+npm start
+```
+
+Frontend runs at `http://localhost:3000`, backend at `http://localhost:5002`.
+
+---
+
+## Deploying on AWS EC2
+
+1. Launch an `m7i.large` EC2 instance (Ubuntu 24.04, 20GB storage)
+2. Install Docker and clone the repo
+3. Start MinIO, Redis, and Kafka as Docker containers
+4. Set up `.env` files with MongoDB credentials
+5. Run backend, trainer, and job-status services
+6. Point the React frontend’s `API_URL` to the EC2 public IP
+
+See `Deployments/Kubernetes/` for full Kubernetes manifests for production deployment on GKE.
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/signup` | Create a new user account |
+| POST | `/login` | Authenticate user |
+| POST | `/submit-job` | Submit a model optimization job |
+| GET | `/prev-runs` | Get all completed jobs for user |
+| GET | `/current-run` | Get currently running jobs |
+| GET | `/download-model` | Download optimized model from MinIO |
 
